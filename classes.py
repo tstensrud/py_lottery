@@ -1,24 +1,25 @@
+import random
 #
 # CLASS USERS
 #
-class Users:
-    def __init__(self, name, username, userId, email, password):
-        self.name = name
-        self.username = username
-        self.userId = userId
-        self.email = email
-        self.password = password
+class User:
+    def __init__(self, name, userName, userId, email, password):
+        self.name = str(name)
+        self.userName = str(userName)
+        self.userId = int(userId)
+        self.email = str(email)
+        self.password = str(password)
 
-    #getters
+    #GETTERS
     def getName(self):
         return self.name
-    def getUsername(self):
+    def getUserName(self):
         return self.userName
     def getUserId(self):
         return self.userId
     def getEmail(self):
         return self.email
-    #setters
+    #SETTERS
     def setEmail(self, email):
         self.email = email
     def setUsername(self, username):
@@ -33,14 +34,15 @@ class Users:
 # CLASS TICKET
 #
 class Ticket:
-    def ___init__(self, ticketId, rows, belongsToUser):
-        self.ticketId = ticketId
-        self.rows = {}
-        self.belongsToUser = belongsToUser
-
-    def createRows(self,numberOfRows):
-        for i in range (numberOfRows):
-            self.rows[i] = 10
+    def __init__(self, ticketId, rows, userId):
+        self.ticketId = int(ticketId)
+        self.rows = []
+        self.userId = int(userId)
     
-    def setRows(self):
-        pass
+    # GETTERS
+    def getTicketId(self):
+        return self.ticketId
+    def getUserId(self):
+        return self.userId
+    def getRows(self):
+        return self.rows
