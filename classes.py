@@ -36,7 +36,7 @@ class User:
 class Ticket:
     def __init__(self, ticketId, rows, userId):
         self.ticketId = int(ticketId)
-        self.rows = []
+        self.rows = [rows]
         self.userId = int(userId)
     
     # GETTERS
