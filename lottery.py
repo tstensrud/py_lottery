@@ -7,129 +7,202 @@ import tkinter as tk
 
 ticket_operations = Ticket_Operations()
 user_operations = User_Operations()
-currentWinnerNumbers = [None]*ticket_operations.numbersPerRow
-totalFrames = 7
-framesList = []
+current_winner_numbers = [None] * ticket_operations.numbers_per_row
 
 def main():
     
-    user_operations.addNewUser("NAVN", "BRUKERNAVN", "E@B.C", "PASSOWRD")
-
     def exit():
         sys.exit()
     
-       
-    def addNewTicket():
+    def add_new_ticket():
         try:
-            userId = int(newTicketUserIdTextField.get())
+            user_id = int(new_ticket_user_id_text_field.get())
         except ValueError:
-            messagebox.showinfo("Error", f"User ID can only contain digits")
+            messagebox.showerror("Error", f"User ID can only contain digits")
             return
-        if user_operations.doesUserExist(userId) == False:
-            messagebox.showinfo("Error", f"User id \"{userId}\" not found")
+        if user_operations.does_user_exist(user_id) == False:
+            messagebox.showinfo("Error", f"User id \"{user_id}\" not found")
             return
-        rows = rowChoice.get()
-        ticket_operations.addNewTicket(rows, userId)
+        rows = row_choice.get()
+        ticket_operations.add_new_ticket(rows, user_id)
 
+    def add_new_user():
+        user_name = add_user_name_entry.get()
+        email = add_user_email_entry.get()
+        try:
+            phone_number = int(add_user_phone_entry.get())
+        except ValueError:
+            messagebox.showerror("Error", "Only numbers in phonenumber")
+            return
+        password = add_user_password_entry.get()
+        user_operations.add_new_user(user_name, email, phone_number, password)
+        for i in range (len(add_user_entries)):
+            add_user_entries[i].delete(0, tk.END)
 
     # switching frames from menu options
     # hides all frames that is not menuItem.
-    def frameSelectionFromMenu(menuItem):
-        for i in range(len(framesList)):
-            if i != menuItem:
-                framesList[i].forget()
+    def frame_selection_from_menu(menu_item):
+        for i in range(len(frames)):
+            if i != menu_item:
+                frames[i].forget()
             else:
-                framesList[i].pack(fill="both", expand=1) 
+                frames[i].pack(fill="both", expand=1)
 
-    def drawNewSetOfWinningNumbers():
-        currentWinnerNumbers = ticket_operations.generateWinningNumbers()
+    def draw_new_set_of_winning_numbers():
+        current_winner_numbers = ticket_operations.generate_winning_numbers()
 
     #main window
-    mainWindow = tk.Tk()
-    mainWindow.geometry("1024x768")
-    mainWindow.title("Lottery")
+    main_window = tk.Tk()
+    main_window.geometry("1024x768")
+    main_window.title("Lottery")
+    main_window.config(background="#21304a")
+
+    # settings for customisation
+    default_text_color= "white"
+    default_bg_color="#21304a"
+    default_entry_field_width = 20
+    INITIAL_VERTICAL_WIDGET_PLACEMENT = 50
+    vertical_placement = INITIAL_VERTICAL_WIDGET_PLACEMENT
+    INITIAL_HORIZONTAL_WIDGET_PLACEMENT = 10
+    horizontal_placement = INITIAL_HORIZONTAL_WIDGET_PLACEMENT
+
+    # Frames
+    initial_frame = tk.Frame(main_window)
+    game_options_frame = tk.Frame(main_window)
+    new_ticket_frame = tk.Frame(main_window)
+    ticket_stats_frame = tk.Frame(main_window)
+    add_user_frame = tk.Frame(main_window)
+    user_stats_frame = tk.Frame(main_window)
+    find_user_frame = tk.Frame(main_window)
+    frames = [initial_frame, game_options_frame, new_ticket_frame, ticket_stats_frame, add_user_frame, 
+              user_stats_frame, find_user_frame]
     
+    for i in range(len(frames)):
+        frames[i].config(background=default_bg_color)
+
+    # widgets for default frame
+    welcome_label = tk.Label(initial_frame, text="Use menu to start")
+    welcome_label.pack()
+    welcome_label.config(background=default_bg_color, fg=default_text_color)
+    initial_frame.pack(fill="both", expand=1)
+
+     
     '''
-    FRAMES
-    0 = default
-    1 = game options
-    2 = new ticket
-    3 = ticket stats
-    4 = add user
-    5 = user stats
-    6 = find user
+    widgets for game stats frame
     '''
-    for i in range(totalFrames):
-        frame = tk.Frame(mainWindow)
-        framesList.append(frame)
+    game_stats_label = tk.Label(game_options_frame, text="GAME OPTIONS")
+    game_stats_label.pack()
+    game_stats_label.config(background=default_bg_color, fg=default_text_color)
+
+    '''
+    widgets for new ticket frame
+    '''
+    new_ticket_label = tk.Label(new_ticket_frame, text="NEW TICKET")
+    new_ticket_label.pack()
+    new_ticket_label.config(background=default_bg_color, fg=default_text_color)
+    new_ticket_rows_label = tk.Label(new_ticket_frame, text="How many rows in ticket: ")
+    new_ticket_user_id_label = tk.Label(new_ticket_frame, text="User ID")
+    new_ticket_rows_label.place(x=10, y=50)
+    new_ticket_rows_label.config(background=default_bg_color, fg=default_text_color)
+    new_ticket_user_id_label.place(x=10, y=100)
+    new_ticket_user_id_label.config(background=default_bg_color, fg=default_text_color)
+    new_ticket_user_id_text_field = tk.Entry(new_ticket_frame, width=10)
+    new_ticket_user_id_text_field.place(x=170, y=100)
+    row_options = [1,2,3,4,5,6,7,8,9,10]
+    row_choice = tk.IntVar(new_ticket_frame)
+    row_choice.set(10)
+    row_options_menu = tk.OptionMenu(new_ticket_frame, row_choice, *row_options)
+    row_options_menu.place(x=170, y=50)
+    row_options_menu.config(highlightthickness=0)
+    new_ticket_button = tk.Button(new_ticket_frame, text="New ticket", width=10, height=1, command=add_new_ticket)
+    new_ticket_button.place(x=10, y=150)
+
+    # widgets for ticket stats frame
+    ticket_stats_label = tk.Label(ticket_stats_frame, text="TICKET STATS")
+    ticket_stats_label.pack()
+    ticket_stats_label.config(background=default_bg_color, fg=default_text_color)
+
+
+    '''
+    widgets for add-user frame
+    '''
+    # labels
+    add_user_label = tk.Label(add_user_frame, text="ADD USER")
+    add_user_label.pack()
+    add_user_label.config(background=default_bg_color, fg=default_text_color)
+    add_user_name_label = tk.Label(add_user_frame, text="Name: ")
+    add_user_email_label = tk.Label(add_user_frame, text="E-mail:")
+    add_user_phone_label = tk.Label(add_user_frame, text="Phone number: ")
+    add_user_password_label = tk.Label(add_user_frame, text="Password: ")
+    add_user_labels = [add_user_name_label, add_user_email_label, add_user_phone_label, add_user_password_label]
     
-    welcomeLabel = tk.Label(framesList[0], text="Use menu to start")
-    welcomeLabel.pack()
-    framesList[0].pack(fill="both", expand=1)
+    for i in range(len(add_user_labels)):
+        add_user_labels[i].place(x=horizontal_placement, y=vertical_placement)
+        add_user_labels[i].config(background=default_bg_color, fg=default_text_color)
+        vertical_placement += 50
+    vertical_placement = INITIAL_VERTICAL_WIDGET_PLACEMENT
+    
+    # entry text-fields
+    add_user_name_entry = tk.Entry(add_user_frame, width=default_entry_field_width+10)
+    add_user_email_entry = tk.Entry(add_user_frame, width=default_entry_field_width+10)
+    add_user_phone_entry = tk.Entry(add_user_frame, width=default_entry_field_width+10)
+    add_user_password_entry = tk.Entry(add_user_frame, width=default_entry_field_width+10)
+    add_user_entries = [add_user_name_entry, add_user_email_entry, add_user_phone_entry, add_user_password_entry]
+    
+    for i in range(len(add_user_entries)):
+        add_user_entries[i].place(x=horizontal_placement+160, y=vertical_placement)
+        vertical_placement += 50
+    vertical_placement = INITIAL_VERTICAL_WIDGET_PLACEMENT
+    
+    # button
+    add_user_button = tk.Button(add_user_frame, text="Add user", width=10, height=1, command=add_new_user)
+    add_user_button.place(x=INITIAL_HORIZONTAL_WIDGET_PLACEMENT, y=250)
 
-    gameStatsLabel = tk.Label(framesList[1], text="GAME OPTIONS")
-    gameStatsLabel.pack()
+    '''
+    widgets for user stats frame
+    '''
+    user_stats_label = tk.Label(user_stats_frame, text="USER STATS")
+    user_stats_label.pack()
+    user_stats_label.config(background=default_bg_color, fg=default_text_color)
 
-    ## NEW TICKET FRAME
-    newTicketLabel = tk.Label(framesList[2], text="NEW TICKET")
-    newTicketLabel.pack()
-    newTicketRowsLabel = tk.Label(framesList[2], text="How many rows in ticket: ")
-    newTicketUserIdLabel = tk.Label(framesList[2], text="User ID")
-    newTicketRowsLabel.place(x=10, y=50)
-    newTicketUserIdLabel.place(x=10, y=100)
-    newTicketUserIdTextField = tk.Entry(framesList[2], width=10)
-    newTicketUserIdTextField.place(x=170, y=100)
-    rowOptions = [1,2,3,4,5,6,7,8,9,10]
-    rowChoice = tk.IntVar(framesList[2])
-    rowChoice.set(10)
-    rowOptionsMenu = tk.OptionMenu(framesList[2], rowChoice, *rowOptions)
-    rowOptionsMenu.place(x=170, y=50)
-    newTicketButton = tk.Button(framesList[2], text="New ticket", width=10, height=1, command=addNewTicket)
-    newTicketButton.place(x=10, y=150)
-
-    ticketStatsLabel = tk.Label(framesList[3], text="TICKET STATS")
-    ticketStatsLabel.pack()
-
-    addUserLabel = tk.Label(framesList[4], text="ADD USER")
-    addUserLabel.pack()
-
-    userStatsLabel = tk.Label(framesList[5], text="USER STATS")
-    userStatsLabel.pack()
-
-    findUserLabel = tk.Label(framesList[6], text="FIND USER")
-    findUserLabel.pack()
+    '''
+    widgets for find user frame
+    '''
+    find_user_label = tk.Label(find_user_frame, text="FIND USER")
+    find_user_label.pack()
+    find_user_label.config(background=default_bg_color, fg=default_text_color)
 
     #
     # TOP MENU
     #
-    menuBar = Menu(mainWindow)
+    menu_bar = Menu(main_window)
     
     #file menu (1)
-    menuBarFileMenu = Menu(menuBar, tearoff=0)
-    menuBar.add_cascade(label="File", menu=menuBarFileMenu)
-    menuBarFileMenu.add_command(label="Game options", command=lambda: frameSelectionFromMenu(1))
-    menuBarFileMenu.add_separator()
-    menuBarFileMenu.add_command(label="Exit", command=exit)
+    menu_bar_file_menu = Menu(menu_bar, tearoff=0)
+    menu_bar.add_cascade(label="File", menu=menu_bar_file_menu)
+    menu_bar_file_menu.add_command(label="Game options", command=lambda: frame_selection_from_menu(1))
+    menu_bar_file_menu.add_separator()
+    menu_bar_file_menu.add_command(label="Exit", command=exit)
     
     
     #tickets menu (2.3)
-    menuBarTicketsMenu = Menu(menuBar, tearoff=0)
-    menuBar.add_cascade(label="Ticket", menu=menuBarTicketsMenu)
-    menuBarTicketsMenu.add_command(label="New ticket", command=lambda: frameSelectionFromMenu(2))
-    menuBarTicketsMenu.add_command(label="Ticket stats", command=lambda: frameSelectionFromMenu(3))
+    menu_bar_tickets_menu = Menu(menu_bar, tearoff=0)
+    menu_bar.add_cascade(label="Ticket", menu=menu_bar_tickets_menu)
+    menu_bar_tickets_menu.add_command(label="New ticket", command=lambda: frame_selection_from_menu(2))
+    menu_bar_tickets_menu.add_command(label="Ticket stats", command=lambda: frame_selection_from_menu(3))
     
 
     #users menu (4, 5, 6)
-    menuBarUsersMenu = Menu(menuBar, tearoff=0)
-    menuBar.add_cascade(label="Users", menu=menuBarUsersMenu)
-    menuBarUsersMenu.add_command(label="Add new user", command=lambda: frameSelectionFromMenu(4))
-    menuBarUsersMenu.add_command(label="User statistics", command=lambda: frameSelectionFromMenu(5))
-    menuBarUsersMenu.add_command(label="Find user", command=lambda: frameSelectionFromMenu(6))
+    menu_bar_users_menu = Menu(menu_bar, tearoff=0)
+    menu_bar.add_cascade(label="Users", menu=menu_bar_users_menu)
+    menu_bar_users_menu.add_command(label="Add new user", command=lambda: frame_selection_from_menu(4))
+    menu_bar_users_menu.add_command(label="User statistics", command=lambda: frame_selection_from_menu(5))
+    menu_bar_users_menu.add_command(label="Find user", command=lambda: frame_selection_from_menu(6))
     
 
-    mainWindow.config(menu=menuBar)
-    mainWindow.config()
-    mainWindow.mainloop()
+    main_window.config(menu=menu_bar)
+    main_window.config()
+    main_window.mainloop()
 
 if __name__ == "__main__":
     main()

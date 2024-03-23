@@ -3,30 +3,26 @@ import random
 # CLASS USERS
 #
 class User:
-    def __init__(self, name, userName, userId, email, password):
+    def __init__(self, name, user_id, email, phone_number, password):
         self.name = str(name)
-        self.userName = str(userName)
-        self.userId = int(userId)
+        self.userId = int(user_id)
         self.email = str(email)
+        self.phone_number = int(phone_number)
         self.password = str(password)
 
     #GETTERS
-    def getName(self):
+    def get_name(self):
         return self.name
-    def getUserName(self):
-        return self.userName
-    def getUserId(self):
+    def get_user_id(self):
         return self.userId
-    def getEmail(self):
+    def get_email(self):
         return self.email
     #SETTERS
-    def setEmail(self, email):
-        self.email = email
-    def setUsername(self, username):
+    def set_username(self, username):
         self.username = username
-    def setEmail(self, email):
+    def set_email(self, email):
         self.email = email
-    def setPassword(self, password):
+    def set_password(self, password):
         self.password = password
     
 
@@ -34,15 +30,15 @@ class User:
 # CLASS TICKET
 #
 class Ticket:
-    def __init__(self, ticketId, rows, userId):
-        self.ticketId = int(ticketId)
+    def __init__(self, ticket_id, rows, user_id):
+        self.ticketId = int(ticket_id)
         self.rows = [rows]
-        self.userId = int(userId)
+        self.userId = int(user_id)
     
     # GETTERS
-    def getTicketId(self):
+    def get_ticket_id(self):
         return self.ticketId
-    def getUserId(self):
+    def get_user_id(self):
         return self.userId
-    def getRows(self):
+    def get_rows(self):
         return self.rows
