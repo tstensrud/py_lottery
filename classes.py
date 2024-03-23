@@ -4,17 +4,17 @@ import random
 #
 class User:
     def __init__(self, name, user_id, email, phone_number, password):
-        self.name = str(name)
-        self.userId = int(user_id)
-        self.email = str(email)
-        self.phone_number = int(phone_number)
-        self.password = str(password)
+        self.name = name
+        self.user_id = user_id
+        self.email = email
+        self.phone_number = phone_number
+        self.password = password
 
     #GETTERS
     def get_name(self):
         return self.name
     def get_user_id(self):
-        return self.userId
+        return self.user_id
     def get_email(self):
         return self.email
     #SETTERS
@@ -31,9 +31,9 @@ class User:
 #
 class Ticket:
     def __init__(self, ticket_id, rows, user_id):
-        self.ticketId = int(ticket_id)
+        self.ticketId = ticket_id
         self.rows = [rows]
-        self.userId = int(user_id)
+        self.userId = user_id
     
     # GETTERS
     def get_ticket_id(self):

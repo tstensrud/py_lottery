@@ -1,5 +1,5 @@
 import sys
-from tkinter import messagebox
+from tkinter import messagebox, scrolledtext
 from ticket_operations import Ticket_Operations
 from user_operations import User_Operations
 from tkinter import *
@@ -11,9 +11,16 @@ current_winner_numbers = [None] * ticket_operations.numbers_per_row
 
 def main():
     
+    user_operations.add_new_user("A", "A@C.D", "123", "dad")
+    user_operations.add_new_user("B", "B@C.D", "123", "dad")
+    user_operations.add_new_user("C", "C@C.D", "123", "dad")
+    user_operations.add_new_user("D", "D@C.D", "123", "dad")
+
+    # exit-button in menu
     def exit():
         sys.exit()
     
+    # add new ticket
     def add_new_ticket():
         try:
             user_id = int(new_ticket_user_id_text_field.get())
@@ -26,6 +33,7 @@ def main():
         rows = row_choice.get()
         ticket_operations.add_new_ticket(rows, user_id)
 
+    # add new user
     def add_new_user():
         user_name = add_user_name_entry.get()
         email = add_user_email_entry.get()
@@ -36,6 +44,9 @@ def main():
             return
         password = add_user_password_entry.get()
         user_operations.add_new_user(user_name, email, phone_number, password)
+        new_user= user_operations.find_user(None, user_name, None)
+        new_user_id = new_user.get_user_id()
+        messagebox.showinfo("User added", f"User {user_name} added with user-id: {new_user_id} ")
         for i in range (len(add_user_entries)):
             add_user_entries[i].delete(0, tk.END)
 
@@ -50,6 +61,34 @@ def main():
 
     def draw_new_set_of_winning_numbers():
         current_winner_numbers = ticket_operations.generate_winning_numbers()
+
+    def find_user():
+        find_user_text_area.delete(1.0, END)
+        name = None
+        email = None
+        userid = None
+
+        if find_user_name_entry.get() != "":
+            name = find_user_name_entry.get()
+
+        if find_user_email_entry.get() != "":
+            email = find_user_email_entry.get()
+
+        if find_user_user_id_entry.get() != "":
+            userid = find_user_user_id_entry.get()
+
+        user_found = user_operations.find_user(userid, name, email)
+
+        if user_found == None:
+            find_user_text_area.insert(1.0, "User not found")
+        else:
+            user_name = user_found.get_name()
+            user_email = user_found.get_email()
+            user_id = user_found.get_user_id()
+            find_user_text_area.insert(1.0, f"User-ID: {user_id}\nName: {user_name} \nE-mail: {user_email}\n")
+            
+
+        
 
     #main window
     main_window = tk.Tk()
@@ -169,8 +208,33 @@ def main():
     widgets for find user frame
     '''
     find_user_label = tk.Label(find_user_frame, text="FIND USER")
+    # labels
     find_user_label.pack()
     find_user_label.config(background=default_bg_color, fg=default_text_color)
+    find_user_name_label = tk.Label(find_user_frame, text="User name")
+    find_user_email_label = tk.Label(find_user_frame, text="Email")
+    find_user_user_id__label = tk.Label(find_user_frame, text="User-ID")
+    find_user_labels = [find_user_name_label, find_user_email_label, find_user_user_id__label]
+    for i in range(len(find_user_labels)):
+        find_user_labels[i].place(x=horizontal_placement, y=vertical_placement)
+        find_user_labels[i].config(background=default_bg_color, fg=default_text_color)
+        vertical_placement += 50
+    vertical_placement = INITIAL_VERTICAL_WIDGET_PLACEMENT
+    #text entries
+    find_user_name_entry = tk.Entry(find_user_frame, width=default_entry_field_width)
+    find_user_email_entry = tk.Entry(find_user_frame, width=default_entry_field_width)
+    find_user_user_id_entry = tk.Entry(find_user_frame, width=default_entry_field_width)
+    find_user_entries = [find_user_name_entry, find_user_email_entry, find_user_user_id_entry]
+    for i in range(len(find_user_entries)):
+        find_user_entries[i].place(x=horizontal_placement+160, y=vertical_placement)
+        vertical_placement += 50
+    vertical_placement = INITIAL_VERTICAL_WIDGET_PLACEMENT
+    #button
+    find_user_button = tk.Button(find_user_frame, text="Find", width=10, height=1, command=find_user)
+    find_user_button.place(x=INITIAL_HORIZONTAL_WIDGET_PLACEMENT, y=200)
+    # output-text field
+    find_user_text_area = scrolledtext.ScrolledText(find_user_frame, wrap=tk.WORD, width=70, height=35)
+    find_user_text_area.place(x=350, y=INITIAL_VERTICAL_WIDGET_PLACEMENT)
 
     #
     # TOP MENU
@@ -201,7 +265,6 @@ def main():
     
 
     main_window.config(menu=menu_bar)
-    main_window.config()
     main_window.mainloop()
 
 if __name__ == "__main__":
