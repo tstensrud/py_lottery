@@ -11,8 +11,8 @@ class User_Operations:
 
     #see if userID exists
     def does_user_exist(self, user_id):
-        for i in range (len(self.users)):
-            if self.users[i].get_user_id() == user_id:
+        for user in self.users:
+            if user.get_user_id() == user_id:
                 return True
         return False
     
@@ -30,19 +30,24 @@ class User_Operations:
         user_found = None
         if user_id != None:
             for user in self.users:
-                if (user.get_user_id() == user_id):
+                if user.get_user_id() == user_id:
                     user_found = user
                     return user_found
         if user_name != None:
             for user in self.users:
-                if (user.get_name() == user_name):
+                if user.get_name() == user_name:
                     user_found = user
                     return user_found
         if user_email != None:
             for user in self.users:
-                if (user.get_email() == user_email):
+                if user.get_email() == user_email:
                     user_found = user
                     return user_found
+        
         return user_found
-        
-        
+    
+    # reset game, moving all active tickets to archived and clearing active tickets
+    def reset_game(self):
+        for user in self.users:
+            user.move_active_to_archived()
+            user.clear_active_tickets()

@@ -5,10 +5,12 @@ import random
 class User:
     def __init__(self, name, user_id, email, phone_number, password):
         self.name = name
-        self.user_id = user_id
+        self.user_id = int(user_id)
         self.email = email
         self.phone_number = phone_number
         self.password = password
+        self.active_tickets = []
+        self.archived_tickets = []
 
     #GETTERS
     def get_name(self):
@@ -17,6 +19,10 @@ class User:
         return self.user_id
     def get_email(self):
         return self.email
+    def get_active_tickets(self):
+        return self.active_tickets
+    def get_archived_tickets(self):
+        return self.archived_tickets
     #SETTERS
     def set_username(self, username):
         self.username = username
@@ -24,16 +30,25 @@ class User:
         self.email = email
     def set_password(self, password):
         self.password = password
+
+    def add_active_ticket(self, ticketid):
+        self.active_tickets.append(ticketid)
+    def move_active_to_archived(self):
+        for ticket in self.active_tickets:
+            self.archived_tickets.append(ticket)
+    def clear_active_tickets(self):
+        self.active_tickets.clear()
     
 
 #
 # CLASS TICKET
 #
 class Ticket:
-    def __init__(self, ticket_id, rows, user_id):
+    def __init__(self, ticket_id, rows, user_id, cost):
         self.ticketId = ticket_id
         self.rows = [rows]
         self.userId = user_id
+        self.cost = cost
     
     # GETTERS
     def get_ticket_id(self):
@@ -42,3 +57,5 @@ class Ticket:
         return self.userId
     def get_rows(self):
         return self.rows
+    def get_ticket_cost(self):
+        return self.cost
