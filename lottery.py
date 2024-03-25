@@ -1,14 +1,18 @@
 import sys
+import re
+import tkinter as tk
+from tkinter import *
 from tkinter import messagebox, scrolledtext
 from ticket_operations import Ticket_Operations
 from user_operations import User_Operations
-from tkinter import *
-import tkinter as tk
+
+
 
 ticket_operations = Ticket_Operations()
 user_operations = User_Operations()
 current_winning_numbers = [None] * ticket_operations.numbers_per_row
 previous_winning_numbers = []
+is_round_finished = False
 
 def main():
     
@@ -24,6 +28,10 @@ def main():
     # add new ticket
     def add_new_ticket():
         new_ticket_text_area.delete(1.0, tk.END)
+        global is_round_finished
+        if is_round_finished == True:
+            messagebox.showerror("Error", "No new tickets can be added untill round is reset")
+            return
         try:
             user_id = int(new_ticket_user_id_text_field.get())
         except ValueError:
@@ -71,9 +79,10 @@ def main():
             if ticket == None:
                 messagebox.showinfo("Not found", "Ticket-id not found. Perhaps it's not archived?")
                 return
+        ticket_date = ticket.get_date()
         rows = ticket.get_rows()
         user = ticket.get_user_id()
-        find_ticket_area.insert(tk.END, f"Object adress: {ticket}\nAssigned to user: {user}\n")
+        find_ticket_area.insert(tk.END, f"Object adress: {ticket}\nAssigned to user: {user}\nPurchased at: {ticket_date}\n")
         for i in range(len(rows)):
             for j in range(len(rows[i])):
                 find_ticket_area.insert(tk.END, f"Row {j}: {rows[i][j]}\n")
@@ -95,6 +104,10 @@ def main():
     def add_new_user():
         user_name = add_user_name_entry.get()
         email = add_user_email_entry.get()
+        email_pattern = re.compile("[a-zA-Z0-9_]+@[a-zA-Z0-9_]+[.]+[a-zA-Z]{2,4}$")
+        if email_pattern.search(email) == None:
+            messagebox.showerror("Error", f"Email \"{email}\" is not valid - name@domain.com")
+            return
         if user_operations.find_existing_email(email) == True:
             messagebox.showerror("Error", f"Email \"{email}\" allready exists in system")
             return
@@ -119,7 +132,7 @@ def main():
                 frames[i].forget()
             else:
                 frames[i].pack(fill="both", expand=1)
-        update_game_stats_labels()
+        update_game_stats()
 
     # draw new set of winning numbers. Can only be used if game is reset
     def draw_new_set_of_winning_numbers():
@@ -136,12 +149,16 @@ def main():
             else:
                 game_options_text_area.insert(tk.END, f"{current_winning_numbers[i]} - ")
 
-    # update labels under game stats which can change from each time the game stats window is opened
-    def update_game_stats_labels():
-        game_stats_total_users_value_label.config(text=f"{len(user_operations.users)}")
-        game_stats_total_active_tickets_value_label.config(text=f"{len(ticket_operations.active_tickets)}")
-        game_stats_total_archived_tickets_value_label.config(text=f"{len(ticket_operations.archived_tickets)}")
-        game_stats_total_income_value_label.config(text=f"{ticket_operations.get_income():,}")
+    # update game stats which can change from each time the game stats window is opened
+    def update_game_stats():
+        game_stats_text_area.delete(1.0, tk.END)
+        total_users = len(user_operations.users)
+        total_active_tickets = len(ticket_operations.active_tickets)
+        total_archived_tickets = len(ticket_operations.archived_tickets)
+        total_income = ticket_operations.get_income()
+        current_price_pool = ticket_operations.get_current_price_pool()
+        jackpot = ticket_operations.get_jackpot()
+        game_stats_text_area.insert(tk.END, f"Total users: {total_users}\nCurrent active tickets: {total_active_tickets}\nTotal archived tickets: {total_archived_tickets}\nTotal income: {total_income}\nCurrent price pool: {current_price_pool}\nCurrent jackpot: {jackpot}")
 
     #find user
     def find_user():
@@ -169,9 +186,10 @@ def main():
             user_name = user_found.get_name()
             user_email = user_found.get_email()
             user_id = user_found.get_user_id()
+            user_creation = user_found.get_date()
             user_active_tickets = user_found.get_active_tickets()
             user_archived_tickets = user_found.get_archived_tickets()
-            find_user_text_area.insert(1.0, f"User-ID: {user_id}\nName: {user_name} \nE-mail: {user_email}\n\n")
+            find_user_text_area.insert(1.0, f"User-ID: {user_id} created at {user_creation}\nName: {user_name} \nE-mail: {user_email}\n\n")
             find_user_text_area.insert(tk.END, "Current active tickets:\n")
             
             if len(user_active_tickets) != 0:
@@ -192,8 +210,7 @@ def main():
 
     #reset game
     def game_reset():
-        global current_winning_numbers
-        global previous_winning_numbers
+        global current_winning_numbers, previous_winning_numbers, is_round_finished      
         user_operations.reset_game()
         ticket_operations.reset_game()
         previous_winning_numbers.append(list(current_winning_numbers))
@@ -201,21 +218,24 @@ def main():
             current_winning_numbers[i] = None
         messagebox.showinfo("Reset", "Game is reset.")
         game_options_text_area.delete(1.0, END)
+        is_round_finished = False
     
     # find this rounds winners
     def find_winners():
         game_options_text_area.delete(1.0, tk.END)
-        global current_winning_numbers
+        global current_winning_numbers, is_round_finished
         if current_winning_numbers[0] == None:
             messagebox.showinfo("Ooops", "No winning numbers are drawn yet")
             return
         
         winners = ticket_operations.find_winning_tickets(current_winning_numbers)
         if len(winners) == 0:
-            game_options_text_area.insert(1.0, f"No winners this round!")
+            game_options_text_area.insert(1.0, f"No winners this round!\n")
+            game_options_text_area.insert(tk.END, f"Jackpot for next round. {ticket_operations.get_current_price_pool()} added to jackpot.") 
         else:
             for i in range(len(winners)):
                 game_options_text_area.insert(1.0, f"Ticket ID: {winners[i].get_ticket_id()} belonging to user {winners[i].get_user_id()} has won!\n")
+        is_round_finished = True
 
     # settings for customisation
     default_text_color= "white"
@@ -323,29 +343,11 @@ def main():
     '''
     game_stats_label = tk.Label(game_stats_frame, text="GAME STATS")
     game_stats_label.pack()
-    game_stats_label.config(background=default_bg_color, fg=default_text_color)
-    game_stats_total_income_label =tk.Label(game_stats_frame, text="Total income from tickets: ") 
-    game_stats_total_users_label = tk.Label(game_stats_frame, text="Total users in databse: ")
-    game_stats_total_active_tickets_label = tk.Label(game_stats_frame, text="Total active tickets: ")
-    game_stats_total_archived_tickets_label = tk.Label(game_stats_frame, text="Total archived tickets: ")
-    game_stats_total_income_value_label = tk.Label(game_stats_frame) 
-    game_stats_total_users_value_label = tk.Label(game_stats_frame)
-    game_stats_total_active_tickets_value_label = tk.Label(game_stats_frame)
-    game_stats_total_archived_tickets_value_label = tk.Label(game_stats_frame)
-    game_stats_labels = [game_stats_total_income_label, game_stats_total_users_label, 
-                         game_stats_total_active_tickets_label, game_stats_total_archived_tickets_label]
-    game_stats_value_labels = [game_stats_total_income_value_label, game_stats_total_users_value_label, 
-                               game_stats_total_active_tickets_value_label, game_stats_total_archived_tickets_value_label]
-    for i in range(len(game_stats_labels)):
-        game_stats_labels[i].place(x=horizontal_placement, y=vertical_placement)
-        game_stats_labels[i].config(background=default_bg_color, fg=default_text_color)
-        vertical_placement += 50
-    vertical_placement = INITIAL_VERTICAL_WIDGET_PLACEMENT
-    for i in range(len(game_stats_value_labels)):
-        game_stats_value_labels[i].place(x=horizontal_placement+160, y=vertical_placement)
-        game_stats_value_labels[i].config(background=default_bg_color, fg=default_text_color)
-        vertical_placement += 50
-    vertical_placement = INITIAL_VERTICAL_WIDGET_PLACEMENT
+    game_stats_label.configure(background=default_bg_color, fg=default_text_color)
+    game_stats_text_area = scrolledtext.ScrolledText(game_stats_frame, wrap=tk.WORD, width=70, height=35)
+    game_stats_text_area.pack()
+    game_stats_text_area.insert(1.0, "GAME STATS:\n")
+    update_game_stats()
 
     '''
     widgets for add-user frame

@@ -1,4 +1,4 @@
-import random
+import datetime
 #
 # CLASS USERS
 #
@@ -11,6 +11,7 @@ class User:
         self.password = password
         self.active_tickets = []
         self.archived_tickets = []
+        self.created_when = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     #GETTERS
     def get_name(self):
@@ -23,6 +24,8 @@ class User:
         return self.active_tickets
     def get_archived_tickets(self):
         return self.archived_tickets
+    def get_date(self):
+        return self.created_when
     #SETTERS
     def set_username(self, username):
         self.username = username
@@ -49,6 +52,7 @@ class Ticket:
         self.rows = [rows]
         self.userId = user_id
         self.cost = cost
+        self.created_when = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     # GETTERS
     def get_ticket_id(self):
@@ -59,3 +63,5 @@ class Ticket:
         return self.rows
     def get_ticket_cost(self):
         return self.cost
+    def get_date(self):
+        return self.created_when

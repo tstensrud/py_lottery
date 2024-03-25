@@ -10,6 +10,8 @@ class Ticket_Operations:
         self.cost_per_row = 10 # cost per row
         self.max_playable_numbers = 40 # total amount of numbers or "balls" that can be in play
         self.total_income = 0
+        self.current_price_pool = 0
+        self.jackpot = 0
 
     # draw a row of winning numbers. Once a number is drawn it's removed from the pool of available numbers
     def generate_winning_numbers(self):
@@ -41,17 +43,31 @@ class Ticket_Operations:
     def add_new_ticket(self, rows, user_id):
         rows_in_new_ticket = [None]*rows
         self.ticket_id += 1
-        ticket_cost = rows * self.cost_per_row
-        self.total_income += ticket_cost
+        ticket_cost = self.ticket_cost(rows)
         for i in range(rows):
             rows_in_new_ticket[i] = self.new_row()
         self.active_tickets.append(Ticket(self.ticket_id, rows_in_new_ticket, user_id, ticket_cost))
         return self.ticket_id
 
+    # calculate price of ticket
+    def ticket_cost(self, rows):
+        ticket_cost = rows * self.cost_per_row
+        self.total_income += ticket_cost
+        self.current_price_pool += ticket_cost
+        return ticket_cost
+
     # get total income
     def get_income(self):
         return self.total_income
-
+    
+    # get current price pool
+    def get_current_price_pool(self):
+        return self.current_price_pool
+    
+    # get jackpot status
+    def get_jackpot(self):
+        return self.jackpot
+    
     # used to find duplicate number when generating a row with random numbers
     def find_douplicate(self, row, number):
         for i in range(len(row)):
@@ -90,8 +106,10 @@ class Ticket_Operations:
         for i in range(len(self.active_tickets)):
             self.archived_tickets.append(self.active_tickets[i])
         self.active_tickets.clear()
+        self.current_price_pool = 0
 
-    # find winning tickets
+
+    # find winning tickets. return ticket-object that has a row who matches the winning_row
     def find_winning_tickets(self, winning_row):
         winners = []
         for i in range(len(self.active_tickets)):
@@ -100,5 +118,9 @@ class Ticket_Operations:
             for j in range(len(ticket_rows)):
                 for k in range(len(ticket_rows[j])):
                     if ticket_rows[j][k] == winning_row:
-                        winners.append(ticket)                  
+                        winners.append(ticket)
+        if len(winners) == 0:
+            self.jackpot += self.current_price_pool
+        else:
+            self.jackpot = 0
         return winners
