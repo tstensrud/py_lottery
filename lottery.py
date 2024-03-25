@@ -23,20 +23,61 @@ def main():
     
     # add new ticket
     def add_new_ticket():
+        new_ticket_text_area.delete(1.0, tk.END)
         try:
             user_id = int(new_ticket_user_id_text_field.get())
         except ValueError:
             messagebox.showerror("Error", f"User ID can only contain digits")
             return
+        try:
+            amount_of_tickets = int(new_ticket_amount_entry.get())
+        except ValueError:
+            messagebox.showerror("Error", f"Amount of tickets must be a number")
+            return
+
         if user_operations.does_user_exist(user_id) == False:
             messagebox.showinfo("Error", f"User id \"{user_id}\" not found")
             return
-        rows = row_choice.get()
-        new_ticket_id = ticket_operations.add_new_ticket(rows, user_id)
-        user_operations.find_user(user_id, None, None).add_active_ticket(new_ticket_id)
-        messagebox.showinfo("Ticket added", f"Ticket \"{new_ticket_id}\" added to user {user_id}")
-        new_ticket_user_id_text_field.delete(0, tk.END)
+        
+        if amount_of_tickets == 0:
+            messagebox.showerror("Error", f"Amount of tickets must be greater than 0")
+            return
 
+        rows = row_choice.get()
+        for _ in range(amount_of_tickets):
+            new_ticket_id = ticket_operations.add_new_ticket(rows, user_id)
+            user_operations.find_user(user_id, None, None).add_active_ticket(new_ticket_id)
+            new_ticket_text_area.insert(tk.END, f"Ticket {new_ticket_id} added to user {user_id}\n")
+            #print(ticket_operations.get_active_ticket(new_ticket_id).get_rows())
+
+        new_ticket_user_id_text_field.delete(0, tk.END)
+        new_ticket_amount_entry.delete(0, tk.END)
+
+    # find ticket based on ticket ID
+    def find_ticket():
+        try:
+            ticket_id = int(find_ticket_entry.get())
+        except ValueError:
+            messagebox.showerror("Error", "Ticket ID can only be numbers")
+            return
+        find_ticket_area.delete(1.0, tk.END)
+        if find_ticket_ticket_status.get() == 0:
+            ticket = ticket_operations.get_active_ticket(ticket_id)
+            if ticket == None:
+                messagebox.showinfo("Not found", "Ticket-id not found. Perhaps it's archived?")
+                return
+        else:
+            ticket = ticket_operations.get_archived_ticket(ticket_id)
+            if ticket == None:
+                messagebox.showinfo("Not found", "Ticket-id not found. Perhaps it's not archived?")
+                return
+        rows = ticket.get_rows()
+        user = ticket.get_user_id()
+        find_ticket_area.insert(tk.END, f"Object adress: {ticket}\nAssigned to user: {user}\n")
+        for i in range(len(rows)):
+            for j in range(len(rows[i])):
+                find_ticket_area.insert(tk.END, f"Row {j}: {rows[i][j]}\n")
+        
     # list all previous winning numbers
     def list_archived_winning_numbers():
         global previous_winning_numbers
@@ -95,11 +136,12 @@ def main():
             else:
                 game_options_text_area.insert(tk.END, f"{current_winning_numbers[i]} - ")
 
+    # update labels under game stats which can change from each time the game stats window is opened
     def update_game_stats_labels():
         game_stats_total_users_value_label.config(text=f"{len(user_operations.users)}")
         game_stats_total_active_tickets_value_label.config(text=f"{len(ticket_operations.active_tickets)}")
         game_stats_total_archived_tickets_value_label.config(text=f"{len(ticket_operations.archived_tickets)}")
-        game_stats_total_income_value_label.config(text=f"{ticket_operations.get_income()}")
+        game_stats_total_income_value_label.config(text=f"{ticket_operations.get_income():,}")
 
     #find user
     def find_user():
@@ -160,6 +202,21 @@ def main():
         messagebox.showinfo("Reset", "Game is reset.")
         game_options_text_area.delete(1.0, END)
     
+    # find this rounds winners
+    def find_winners():
+        game_options_text_area.delete(1.0, tk.END)
+        global current_winning_numbers
+        if current_winning_numbers[0] == None:
+            messagebox.showinfo("Ooops", "No winning numbers are drawn yet")
+            return
+        
+        winners = ticket_operations.find_winning_tickets(current_winning_numbers)
+        if len(winners) == 0:
+            game_options_text_area.insert(1.0, f"No winners this round!")
+        else:
+            for i in range(len(winners)):
+                game_options_text_area.insert(1.0, f"Ticket ID: {winners[i].get_ticket_id()} belonging to user {winners[i].get_user_id()} has won!\n")
+
     # settings for customisation
     default_text_color= "white"
     default_bg_color="#21304a"
@@ -184,8 +241,9 @@ def main():
     add_user_frame = tk.Frame(main_window)
     user_stats_frame = tk.Frame(main_window)
     find_user_frame = tk.Frame(main_window)
+    find_ticket_frame = tk.Frame(main_window)
     frames = [initial_frame, game_options_frame, new_ticket_frame, game_stats_frame, add_user_frame, 
-              user_stats_frame, find_user_frame]
+              user_stats_frame, find_user_frame, find_ticket_frame]
     
     for i in range(len(frames)):
         frames[i].config(background=default_bg_color)
@@ -207,7 +265,8 @@ def main():
     game_options_draw_winning_numbers_label = tk.Label(game_options_frame, text="Draw new winning numbers")
     game_options_reset_game_label = tk.Label(game_options_frame, text="Reset game")
     game_options_archive_label = tk.Label(game_options_frame, text="Winning numbers archive")
-    game_options_labels = [game_options_draw_winning_numbers_label, game_options_reset_game_label, game_options_archive_label]
+    game_options_find_winners_label = tk.Label(game_options_frame, text="Find this rounds winners")
+    game_options_labels = [game_options_draw_winning_numbers_label, game_options_reset_game_label, game_options_archive_label, game_options_find_winners_label]
     for i in range(len(game_options_labels)):
         game_options_labels[i].config(background=default_bg_color, fg=default_text_color)
         game_options_labels[i].place(x=INITIAL_HORIZONTAL_WIDGET_PLACEMENT, y=vertical_placement)
@@ -216,8 +275,9 @@ def main():
     # buttons
     game_options_draw_winning_numbers_button = tk.Button(game_options_frame, text="Draw numbers", width=15, height=1, command=draw_new_set_of_winning_numbers)
     game_options_reset_game_button = tk.Button(game_options_frame, text="Reset game", width=15, height=1, command=game_reset)
-    game_options_archived_winners = tk.Button(game_options_frame, text="Archive", width=15, height=1, command=list_archived_winning_numbers)
-    game_option_buttons = [game_options_draw_winning_numbers_button, game_options_reset_game_button, game_options_archived_winners]
+    game_options_archived_winners_button = tk.Button(game_options_frame, text="Archive", width=15, height=1, command=list_archived_winning_numbers)
+    game_options_draw_winners_button = tk.Button(game_options_frame, text="Draw!", width=15, height=1, command=find_winners)
+    game_option_buttons = [game_options_draw_winning_numbers_button, game_options_reset_game_button, game_options_archived_winners_button, game_options_draw_winners_button]
 
     for i in range(len(game_option_buttons)):
         game_option_buttons[i].place(x=INITIAL_HORIZONTAL_WIDGET_PLACEMENT+160, y=vertical_placement)
@@ -233,13 +293,19 @@ def main():
     new_ticket_label.pack()
     new_ticket_label.config(background=default_bg_color, fg=default_text_color)
     new_ticket_rows_label = tk.Label(new_ticket_frame, text="How many rows in ticket: ")
-    new_ticket_user_id_label = tk.Label(new_ticket_frame, text="User ID")
-    new_ticket_rows_label.place(x=10, y=50)
-    new_ticket_rows_label.config(background=default_bg_color, fg=default_text_color)
-    new_ticket_user_id_label.place(x=10, y=100)
-    new_ticket_user_id_label.config(background=default_bg_color, fg=default_text_color)
+    new_ticket_user_id_label = tk.Label(new_ticket_frame, text="User ID for ticket holder")
+    new_ticket_amount_label = tk.Label(new_ticket_frame, text="How many tickets")
+    new_ticket_labels = [new_ticket_rows_label, new_ticket_user_id_label, new_ticket_amount_label]
+    for i in range(len(new_ticket_labels)):
+        new_ticket_labels[i].place(x=horizontal_placement, y=vertical_placement)
+        new_ticket_labels[i].config(background=default_bg_color, fg=default_text_color)
+        vertical_placement += 50
+    vertical_placement = INITIAL_VERTICAL_WIDGET_PLACEMENT
+    
     new_ticket_user_id_text_field = tk.Entry(new_ticket_frame, width=10)
     new_ticket_user_id_text_field.place(x=170, y=100)
+    new_ticket_amount_entry = tk.Entry(new_ticket_frame, width=10)
+    new_ticket_amount_entry.place(x=170, y=150)
     row_options = [1,2,3,4,5,6,7,8,9,10]
     row_choice = tk.IntVar(new_ticket_frame)
     row_choice.set(10)
@@ -247,8 +313,11 @@ def main():
     row_options_menu.place(x=170, y=50)
     row_options_menu.config(highlightthickness=0)
     new_ticket_button = tk.Button(new_ticket_frame, text="New ticket", width=10, height=1, command=add_new_ticket)
-    new_ticket_button.place(x=10, y=150)
+    new_ticket_button.place(x=10, y=200)
     
+    new_ticket_text_area = scrolledtext.ScrolledText(new_ticket_frame, wrap=tk.WORD, width=70, height=35)
+    new_ticket_text_area.place(x=350, y=INITIAL_VERTICAL_WIDGET_PLACEMENT)
+
     '''
     widgets for game stats frame
     '''
@@ -352,6 +421,33 @@ def main():
     find_user_text_area = scrolledtext.ScrolledText(find_user_frame, wrap=tk.WORD, width=70, height=35)
     find_user_text_area.place(x=350, y=INITIAL_VERTICAL_WIDGET_PLACEMENT)
 
+    '''
+    widgets for find ticket frame
+    '''
+    find_ticket_label = tk.Label(find_ticket_frame, text="FIND TICKET")
+    find_ticket_label.pack()
+    find_ticket_label.config(background=default_bg_color, fg=default_text_color)
+    find_ticket_ticketid_label = tk.Label(find_ticket_frame, text="Ticket ID")
+    find_ticket_ticketstatus_label = tk.Label(find_ticket_frame, text="Archived")
+    find_ticket_labels = [find_ticket_ticketid_label, find_ticket_ticketstatus_label]
+    for i in range(len(find_ticket_labels)):
+        find_ticket_labels[i].place(x=horizontal_placement, y=vertical_placement)
+        find_ticket_labels[i].config(background=default_bg_color, fg=default_text_color)
+        vertical_placement += 50
+    vertical_placement = INITIAL_VERTICAL_WIDGET_PLACEMENT
+    find_ticket_entry = tk.Entry(find_ticket_frame, width=default_entry_field_width)
+    find_ticket_ticket_status = IntVar()
+    find_ticket_checkbox = Checkbutton(find_ticket_frame, variable=find_ticket_ticket_status, onvalue=1, offvalue=0)
+    find_ticket_checkbox.config(background=default_bg_color, activebackground=default_bg_color)
+    find_ticket_widgets = [find_ticket_entry, find_ticket_checkbox]
+    for i in range(len(find_ticket_widgets)):
+        find_ticket_widgets[i].place(x=horizontal_placement+100, y=vertical_placement)
+        vertical_placement += 50
+    vertical_placement = INITIAL_VERTICAL_WIDGET_PLACEMENT
+    find_ticket_button = tk.Button(find_ticket_frame, text="Find", width=10, height=1, command=find_ticket)
+    find_ticket_button.place(x=INITIAL_HORIZONTAL_WIDGET_PLACEMENT, y=150)
+    find_ticket_area = scrolledtext.ScrolledText(find_ticket_frame, wrap=tk.WORD, width=70, height=35)
+    find_ticket_area.place(x=350, y=INITIAL_VERTICAL_WIDGET_PLACEMENT)
     #
     # TOP MENU
     #
@@ -370,6 +466,7 @@ def main():
     menu_bar_tickets_menu = Menu(menu_bar, tearoff=0)
     menu_bar.add_cascade(label="Ticket", menu=menu_bar_tickets_menu)
     menu_bar_tickets_menu.add_command(label="New ticket", command=lambda: frame_selection_from_menu(2))
+    menu_bar_tickets_menu.add_command(label="Find ticket", command=lambda: frame_selection_from_menu(7))
     
     
 
