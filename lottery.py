@@ -5,24 +5,21 @@ from tkinter import *
 from tkinter import messagebox, scrolledtext
 from ticket_operations import Ticket_Operations
 from user_operations import User_Operations
+from classes import Operations
 
-
-
+operations = Operations()
 ticket_operations = Ticket_Operations()
 user_operations = User_Operations()
+
 current_winning_numbers = [None] * ticket_operations.numbers_per_row
 previous_winning_numbers = []
 is_round_finished = False
 
 def main():
-    
-    user_operations.add_new_user("A", "A@C.D", "123", "dad")
-    user_operations.add_new_user("B", "B@C.D", "123", "dad")
-    user_operations.add_new_user("C", "C@C.D", "123", "dad")
-    user_operations.add_new_user("D", "D@C.D", "123", "dad")
 
     # exit-button in menu
     def exit():
+
         sys.exit()
     
     # add new ticket
@@ -54,10 +51,10 @@ def main():
         rows = row_choice.get()
         for _ in range(amount_of_tickets):
             new_ticket_id = ticket_operations.add_new_ticket(rows, user_id)
-            user_operations.find_user(user_id, None, None).add_active_ticket(new_ticket_id)
+            user_operations.find_user(user_id, None, None).add_ticket(new_ticket_id)
             new_ticket_text_area.insert(tk.END, f"Ticket {new_ticket_id} added to user {user_id}\n")
-            #print(ticket_operations.get_active_ticket(new_ticket_id).get_rows())
-
+            user_operations.add_ticketid_to_user(new_ticket_id, user_id)
+        
         new_ticket_user_id_text_field.delete(0, tk.END)
         new_ticket_amount_entry.delete(0, tk.END)
 
@@ -117,8 +114,7 @@ def main():
             messagebox.showerror("Error", "Only numbers in phonenumber")
             return
         password = add_user_password_entry.get()
-        user_operations.add_new_user(user_name, email, phone_number, password)
-        new_user= user_operations.find_user(None, user_name, None)
+        new_user = user_operations.add_new_user(user_name, email, phone_number, password)
         new_user_id = new_user.get_user_id()
         messagebox.showinfo("User added", f"User {user_name} added with user-id: {new_user_id} ")
         for i in range (len(add_user_entries)):
@@ -152,13 +148,18 @@ def main():
     # update game stats which can change from each time the game stats window is opened
     def update_game_stats():
         game_stats_text_area.delete(1.0, tk.END)
-        total_users = len(user_operations.users)
-        total_active_tickets = len(ticket_operations.active_tickets)
-        total_archived_tickets = len(ticket_operations.archived_tickets)
+        total_users = user_operations.total_users
+        total_active_tickets = ticket_operations.active_tickets
+        total_archived_tickets = ticket_operations.archived_tickets
         total_income = ticket_operations.get_income()
         current_price_pool = ticket_operations.get_current_price_pool()
         jackpot = ticket_operations.get_jackpot()
-        game_stats_text_area.insert(tk.END, f"Total users: {total_users}\nCurrent active tickets: {total_active_tickets}\nTotal archived tickets: {total_archived_tickets}\nTotal income: {total_income}\nCurrent price pool: {current_price_pool}\nCurrent jackpot: {jackpot}")
+        game_stats_text_area.insert(tk.END, f"Total users: {total_users}\n"
+                                    f"Current active tickets: {total_active_tickets}\n"
+                                    f"Total archived tickets: {total_archived_tickets}\n"
+                                    f"Total income: {total_income}\n"
+                                    f"Current price pool: {current_price_pool}\n"
+                                    f"Current jackpot: {jackpot}")
 
     #find user
     def find_user():
@@ -188,7 +189,6 @@ def main():
             user_id = user_found.get_user_id()
             user_creation = user_found.get_date()
             user_active_tickets = user_found.get_active_tickets()
-            user_archived_tickets = user_found.get_archived_tickets()
             find_user_text_area.insert(1.0, f"User-ID: {user_id} created at {user_creation}\nName: {user_name} \nE-mail: {user_email}\n\n")
             find_user_text_area.insert(tk.END, "Current active tickets:\n")
             
@@ -198,11 +198,8 @@ def main():
             else:
                 find_user_text_area.insert(tk.END, f"No active tickets\n")
             find_user_text_area.insert(tk.END, "\nArchived tickets:\n")
-            if len(user_archived_tickets) != 0:
-                for i in range(len(user_archived_tickets)):
-                    find_user_text_area.insert(tk.END, f"Ticket nr.{i+1}: ticket-id: {user_archived_tickets[i]}\n")
-            else:
-                find_user_text_area.insert(tk.END, f"No tickets in archive")
+
+            find_user_text_area.insert(tk.END, f"No tickets in archive")
 
             find_user_name_entry.delete(0, tk.END)
             find_user_email_entry.delete(0, tk.END)
@@ -237,6 +234,14 @@ def main():
                 game_options_text_area.insert(1.0, f"Ticket ID: {winners[i].get_ticket_id()} belonging to user {winners[i].get_user_id()} has won!\n")
         is_round_finished = True
 
+    #reset ticket-db
+    def reset_ticket_db():
+        ticket_operations.reset_database("t")
+        ticket_operations.reset_database("a")
+    #reset user-db
+    def reset_user_db():
+        user_operations.reset_database("u")
+    
     # settings for customisation
     default_text_color= "white"
     default_bg_color="#21304a"
@@ -297,7 +302,9 @@ def main():
     game_options_reset_game_button = tk.Button(game_options_frame, text="Reset game", width=15, height=1, command=game_reset)
     game_options_archived_winners_button = tk.Button(game_options_frame, text="Archive", width=15, height=1, command=list_archived_winning_numbers)
     game_options_draw_winners_button = tk.Button(game_options_frame, text="Draw!", width=15, height=1, command=find_winners)
-    game_option_buttons = [game_options_draw_winning_numbers_button, game_options_reset_game_button, game_options_archived_winners_button, game_options_draw_winners_button]
+    game_options_empty_ticketdb_button = tk.Button(game_options_frame, text="Reset ticket db", width=15, height=1, command=reset_ticket_db)
+    game_options_empty_userdb_button = tk.Button(game_options_frame, text="Reset user db", width=15, height=1, command=reset_user_db)
+    game_option_buttons = [game_options_draw_winning_numbers_button, game_options_reset_game_button, game_options_archived_winners_button, game_options_draw_winners_button, game_options_empty_ticketdb_button, game_options_empty_userdb_button]
 
     for i in range(len(game_option_buttons)):
         game_option_buttons[i].place(x=INITIAL_HORIZONTAL_WIDGET_PLACEMENT+160, y=vertical_placement)
