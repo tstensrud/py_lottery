@@ -32,7 +32,7 @@ class Operations:
             data = json.load(game_info)
         return data
     
-    # open and write to archive-file.  'a' for archive. 't' for active tickets. 'u' for users
+    # open and write to archive-file.  'a' for archive. 't' for active tickets. 'u' for users, 'w' for winning numbers
     def write_to_database(self, object_list, database):
         # archive-file
         if database == "a":
@@ -45,9 +45,13 @@ class Operations:
         # users-file
         elif database == "u":
             with open("./data/users.pkl", "wb") as users:
-                pickle.dump(object_list, users)  
+                pickle.dump(object_list, users)
+        # winners-file
+        elif database == "w":
+            with open("./data/oldwinners.pkl", "wb") as win:
+                pickle.dump(object_list, win)
     
-    # open and read file. 'a' for archive. 't' for active tickets. 'u' for users
+    # open and read file. 'a' for archive. 't' for active tickets. 'u' for users, 'w' for winning numbers
     def read_database(self, database):
         # archive-file
         if database == "a":
@@ -67,6 +71,12 @@ class Operations:
             with open("./data/users.pkl", "rb") as users:
                 opened_users = pickle.load(users)
             return opened_users
+        # winning numbers file
+        elif database == "w":
+            winners = []
+            with open("./data/oldwinners.pkl", "rb") as win:
+                winners = pickle.load(win)
+            return winners
     
 
 
@@ -140,3 +150,8 @@ class Ticket:
         return self.cost
     def get_date(self):
         return self.created_when
+    def get_active(self):
+        return self.active
+    
+    def set_active(self):
+        self.active == False

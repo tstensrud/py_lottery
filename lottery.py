@@ -1,6 +1,7 @@
 import sys
 import re
 import tkinter as tk
+import os
 from tkinter import *
 from tkinter import messagebox, scrolledtext
 from ticket_operations import Ticket_Operations
@@ -11,16 +12,39 @@ operations = Operations()
 ticket_operations = Ticket_Operations()
 user_operations = User_Operations()
 
-current_winning_numbers = [None] * ticket_operations.numbers_per_row
+winning_numbers = [None] * ticket_operations.numbers_per_row
 previous_winning_numbers = []
-is_round_finished = False
+
 
 def main():
 
-    # exit-button in menu
-    def exit():
+    # loading all previous and current set of winning numbers. first in list index 0 is always current.
+    # set loadup to True when method is called upon program start. set update to True when it is to update with
+    # new set of winning numbers. new_set is the new set if winning numbers
+    def load_all_winning_numbers(loadup, update, new_set):
+        global winning_numbers, previous_winning_numbers
 
-        sys.exit()
+        if loadup == True:
+            file_size = os.path.getsize("./data/oldwinners.pkl")
+            # if no numbers have been drawn yet, add an empty set of 0s
+            if file_size == 0:
+                start_list = [0,0,0,0,0,0,0,0]
+                operations.write_to_database(start_list, "w")
+
+            number_sets = operations.read_database("w")
+            for i in range(len(number_sets)):
+                if i == 0:
+                    winning_numbers = number_sets[i]
+                else:
+                    previous_winning_numbers.append(number_sets[i])
+        if update == True:
+            number_sets = operations.read_database("w")
+            winning_numbers = number_sets[0]
+            number_sets.insert(0,new_set)
+            operations.write_to_database(number_sets, "w")
+            load_all_winning_numbers(True, False, None)
+
+    load_all_winning_numbers(True, False, None)
     
     # add new ticket
     def add_new_ticket():
@@ -50,7 +74,7 @@ def main():
 
         rows = row_choice.get()
         for _ in range(amount_of_tickets):
-            new_ticket_id = ticket_operations.add_new_ticket(rows, user_id)
+            new_ticket_id = int(ticket_operations.add_new_ticket(rows, user_id))
             user_operations.find_user(user_id, None, None).add_ticket(new_ticket_id)
             new_ticket_text_area.insert(tk.END, f"Ticket {new_ticket_id} added to user {user_id}\n")
             user_operations.add_ticketid_to_user(new_ticket_id, user_id)
@@ -132,19 +156,22 @@ def main():
 
     # draw new set of winning numbers. Can only be used if game is reset
     def draw_new_set_of_winning_numbers():
-        global current_winning_numbers
-        if current_winning_numbers[0] != None:
-            messagebox.showerror("Oh no!", "A set of winning numbers is already drawn")
+        
+        game_status = operations.read_gameinfo_json()
+        if game_status["game"]["round_finished"] == False:
+            messagebox.showerror("Error", "Round is not finished and no new numbers can be drawn")
             return
         game_options_text_area.delete(1.0, END)
-        current_winning_numbers = ticket_operations.generate_winning_numbers()
+        new_set_winning_numbers = ticket_operations.generate_winning_numbers()
         game_options_text_area.insert(1.0, "Wining numbers are:\n")
-        for i in range(len(current_winning_numbers)):
-            if i == len(current_winning_numbers) - 1:
-                game_options_text_area.insert(tk.END, f"{current_winning_numbers[i]}")
+        for i in range(len(new_set_winning_numbers)):
+            if i == len(new_set_winning_numbers) - 1:
+                game_options_text_area.insert(tk.END, f"{new_set_winning_numbers[i]}")
             else:
-                game_options_text_area.insert(tk.END, f"{current_winning_numbers[i]} - ")
-
+                game_options_text_area.insert(tk.END, f"{new_set_winning_numbers[i]} - ")
+        
+        load_all_winning_numbers(False, True, new_set_winning_numbers)
+        
     # update game stats which can change from each time the game stats window is opened
     def update_game_stats():
         game_stats_text_area.delete(1.0, tk.END)
@@ -154,12 +181,15 @@ def main():
         total_income = ticket_operations.get_income()
         current_price_pool = ticket_operations.get_current_price_pool()
         jackpot = ticket_operations.get_jackpot()
+        game_status = operations.read_gameinfo_json()
         game_stats_text_area.insert(tk.END, f"Total users: {total_users}\n"
                                     f"Current active tickets: {total_active_tickets}\n"
                                     f"Total archived tickets: {total_archived_tickets}\n"
                                     f"Total income: {total_income}\n"
                                     f"Current price pool: {current_price_pool}\n"
-                                    f"Current jackpot: {jackpot}")
+                                    f"Current jackpot: {jackpot}\n"
+                                    f"Current winning numbers: {winning_numbers}\n"
+                                    f"Round finished: {game_status['game']['round_finished']}")
 
     #find user
     def find_user():
@@ -205,43 +235,56 @@ def main():
             find_user_email_entry.delete(0, tk.END)
             find_user_user_id_entry.delete(0, tk.END)
 
-    #reset game
+    # game reset after a draw is finished
     def game_reset():
-        global current_winning_numbers, previous_winning_numbers, is_round_finished      
-        user_operations.reset_game()
+             
         ticket_operations.reset_game()
-        previous_winning_numbers.append(list(current_winning_numbers))
-        for i in range(len(current_winning_numbers)):
-            current_winning_numbers[i] = None
+        
+        
+        
         messagebox.showinfo("Reset", "Game is reset.")
         game_options_text_area.delete(1.0, END)
-        is_round_finished = False
+        
+        game_info = operations.read_gameinfo_json()
+        game_info["game"]["round_finished"] == False
     
     # find this rounds winners
     def find_winners():
         game_options_text_area.delete(1.0, tk.END)
-        global current_winning_numbers, is_round_finished
-        if current_winning_numbers[0] == None:
-            messagebox.showinfo("Ooops", "No winning numbers are drawn yet")
-            return
+        global winning_numbers
         
-        winners = ticket_operations.find_winning_tickets(current_winning_numbers)
+        winners = ticket_operations.find_winning_tickets(winning_numbers)
+
         if len(winners) == 0:
             game_options_text_area.insert(1.0, f"No winners this round!\n")
             game_options_text_area.insert(tk.END, f"Jackpot for next round. {ticket_operations.get_current_price_pool()} added to jackpot.") 
         else:
             for i in range(len(winners)):
                 game_options_text_area.insert(1.0, f"Ticket ID: {winners[i].get_ticket_id()} belonging to user {winners[i].get_user_id()} has won!\n")
-        is_round_finished = True
+        game_info = operations.read_gameinfo_json()
+        game_info["game"]["round_finished"] == True
+        operations.write_to_json(game_info)
 
     #reset ticket-db
     def reset_ticket_db():
         ticket_operations.reset_database("t")
         ticket_operations.reset_database("a")
+    
     #reset user-db
     def reset_user_db():
         user_operations.reset_database("u")
     
+    #list all tickets
+    def list_all_tickets():
+        find_ticket_area.delete(1.0, tk.END)
+        tickets = ticket_operations.read_database("t")
+        for i in range(len(tickets)):
+            find_ticket_area.insert(tk.END, f"Ticket ID: {tickets[i].get_ticket_id()} to user {tickets[i].get_user_id()}\n")
+    
+    # exit-button in menu
+    def exit():
+        sys.exit()
+
     # settings for customisation
     default_text_color= "white"
     default_bg_color="#21304a"
@@ -454,7 +497,9 @@ def main():
         vertical_placement += 50
     vertical_placement = INITIAL_VERTICAL_WIDGET_PLACEMENT
     find_ticket_button = tk.Button(find_ticket_frame, text="Find", width=10, height=1, command=find_ticket)
+    find_ticket_listall_button = tk.Button(find_ticket_frame, text="List all tickets", width=10, height=1, command=list_all_tickets)
     find_ticket_button.place(x=INITIAL_HORIZONTAL_WIDGET_PLACEMENT, y=150)
+    find_ticket_listall_button.place(x=INITIAL_HORIZONTAL_WIDGET_PLACEMENT, y=200)
     find_ticket_area = scrolledtext.ScrolledText(find_ticket_frame, wrap=tk.WORD, width=70, height=35)
     find_ticket_area.place(x=350, y=INITIAL_VERTICAL_WIDGET_PLACEMENT)
     #

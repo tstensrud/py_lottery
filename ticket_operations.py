@@ -3,7 +3,18 @@ import random
 from classes import Ticket, Operations
 
 class Ticket_Operations(Operations):
+
     def __init__(self):
+        
+        self.numbers_per_row = 0  # max numbers per row
+        self.cost_per_row = 0 # cost per row
+        self.max_playable_numbers = 0 # total amount of numbers or "balls" that can be in play
+        self.total_income = 0
+        self.current_price_pool = 0
+        self.jackpot = 0
+        is_round_finished = False
+        self.load_game_info(False)
+
         try:
             self.active_tickets = len(self.read_database("t")) # total active Ticket-objects
             self.archived_tickets = len(self.read_database("a")) # total archived Ticket-objects
@@ -12,28 +23,20 @@ class Ticket_Operations(Operations):
             self.active_tickets = len(self.read_database("t"))
             self.archived_tickets = len(self.read_database("a"))
 
-        self.numbers_per_row = 0  # max numbers per row
-        self.cost_per_row = 0 # cost per row
-        self.max_playable_numbers = 0 # total amount of numbers or "balls" that can be in play
-        self.total_income = 0
-        self.current_price_pool = 0
-        self.jackpot = 0
-        self.load_game_info(False)
-
     # add some dummy tickets if the ticket-file is empty
     def add_dummy_tickets(self):
         file_size = os.path.getsize("./data/tickets.pkl")
         if file_size == 0:
             tickets = []
-            tickets.append(Ticket(-1,1,1,1))
-            tickets.append(Ticket(-2,1,1,1))
+            tickets.append(Ticket(1,self.new_row(),1,1))
+            tickets.append(Ticket(2,self.new_row(),1,1))
             self.write_to_database(tickets, "t")
         
         file_size_a = os.path.getsize("./data/ticketarchive.pkl")
         if file_size_a == 0:
             tickets = []
-            tickets.append(Ticket(-3,1,1,1))
-            tickets.append(Ticket(-4,1,1,1))
+            tickets.append(Ticket(3,self.new_row(),1,1))
+            tickets.append(Ticket(4,self.new_row(),1,1))
             self.write_to_database(tickets, "a")
     
     # method runs when program starting to sett contructor-variables to latest settings
@@ -45,31 +48,36 @@ class Ticket_Operations(Operations):
             # first time program is run these values are initialized
             if json_file_size == 0:
                 game_info = {
-                    "numbers_per_row" : 8,
-                    "cost_per_row" : 10,
-                    "max_playable_numbers" : 40,
-                    "total_income" : 0,
-                    "current_price_pool" : 0,
-                    "jackpot" : 0
+                    "ticket_data": {
+                        "numbers_per_row" : 8,
+                        "cost_per_row" : 10,
+                        "max_playable_numbers" : 40,
+                    },
+                    "game": {
+                        "total_income" : 0,
+                        "current_price_pool" : 0,
+                        "jackpot" : 0,
+                        "round_finished" : False
+                    }
                 }
                 self.write_to_json(game_info)
         
             game_info = self.read_gameinfo_json()
-            self.numbers_per_row = game_info["numbers_per_row"]
-            self.cost_per_row = game_info["cost_per_row"]
-            self.max_playable_numbers = game_info["max_playable_numbers"]
-            self.total_income = game_info["total_income"]
-            self.current_price_pool =  game_info["current_price_pool"]
-            self.jackpot = game_info["jackpot"]
+            self.numbers_per_row = game_info["ticket_data"]["numbers_per_row"]
+            self.cost_per_row = game_info["ticket_data"]["cost_per_row"]
+            self.max_playable_numbers = game_info["ticket_data"]["max_playable_numbers"]
+            self.total_income = game_info["game"]["total_income"]
+            self.current_price_pool =  game_info["game"]["current_price_pool"]
+            self.jackpot = game_info["game"]["jackpot"]
         
         elif update == True:
             game_info = self.read_gameinfo_json()
-            game_info["numbers_per_row"] = self.numbers_per_row
-            game_info["cost_per_row"] = self.cost_per_row
-            game_info["max_playable_numbers"] = self.max_playable_numbers
-            game_info["total_income"] = self.total_income
-            game_info["current_price_pool"] = self.current_price_pool
-            game_info["jackpot"] = self.jackpot
+            game_info["ticket_data"]["numbers_per_row"] = self.numbers_per_row
+            game_info["ticket_data"]["cost_per_row"] = self.cost_per_row
+            game_info["ticket_data"]["max_playable_numbers"] = self.max_playable_numbers
+            game_info["game"]["total_income"] = self.total_income
+            game_info["game"]["current_price_pool"] = self.current_price_pool
+            game_info["game"]["jackpot"] = self.jackpot
             self.write_to_json(game_info)
 
     # draw a row of winning numbers. Once a number is drawn it's removed from the pool of available numbers
@@ -186,8 +194,10 @@ class Ticket_Operations(Operations):
     # find winning tickets. return ticket-object that has a row who matches the winning_row
     def find_winning_tickets(self, winning_row):
         winners = []
-        for i in range(len(self.active_tickets)):
-            ticket = self.active_tickets[i]
+        tickets = self.read_database("t")
+
+        for i in range(len(tickets)):
+            ticket = tickets[i]
             ticket_rows = ticket.get_rows()
             for j in range(len(ticket_rows)):
                 for k in range(len(ticket_rows[j])):

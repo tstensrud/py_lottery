@@ -70,17 +70,10 @@ class User_Operations(Operations):
     
     # add ticket-id to user
     def add_ticketid_to_user(self, ticket_id, user_id):
-        print("her?")
         user_list = self.read_database("u")
         for i in range(len(user_list)):
-            if user_list[i].get_user_id == user_id:
+            if user_list[i].get_user_id() == user_id:
                 user_list[i].add_ticket(ticket_id)
                 self.write_to_database(user_list, "u")
                 return
-        
-        
-    # reset game, moving all active tickets to archived and clearing active tickets
-    def reset_game(self):
-        for user in self.users:
-            user.move_active_to_archived()
-            user.clear_active_tickets()
+
