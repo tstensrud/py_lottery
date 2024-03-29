@@ -88,6 +88,8 @@ class Operations:
             open("./data/tickets.pkl", "w").close()
         elif database == "u":
             open("./data/users.pkl", "w").close()
+        elif database == "w":
+            open("./data/oldwinners.pkl", "w").close()
 
 #
 # CLASS USERS

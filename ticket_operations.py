@@ -12,7 +12,6 @@ class Ticket_Operations(Operations):
         self.total_income = 0
         self.current_price_pool = 0
         self.jackpot = 0
-        is_round_finished = False
         self.load_game_info(False)
 
         try:
@@ -57,7 +56,7 @@ class Ticket_Operations(Operations):
                         "total_income" : 0,
                         "current_price_pool" : 0,
                         "jackpot" : 0,
-                        "round_finished" : False
+                        "round_finished" : True
                     }
                 }
                 self.write_to_json(game_info)

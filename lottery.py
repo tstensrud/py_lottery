@@ -25,10 +25,11 @@ def main():
         global winning_numbers, previous_winning_numbers
 
         if loadup == True:
-            file_size = os.path.getsize("./data/oldwinners.pkl")
+            
             # if no numbers have been drawn yet, add an empty set of 0s
+            file_size = os.path.getsize("./data/oldwinners.pkl")
             if file_size == 0:
-                start_list = [0,0,0,0,0,0,0,0]
+                start_list = [[0,0,0,0,0,0,0,0]]
                 operations.write_to_database(start_list, "w")
 
             number_sets = operations.read_database("w")
@@ -37,6 +38,7 @@ def main():
                     winning_numbers = number_sets[i]
                 else:
                     previous_winning_numbers.append(number_sets[i])
+            
         if update == True:
             number_sets = operations.read_database("w")
             winning_numbers = number_sets[0]
@@ -44,13 +46,13 @@ def main():
             operations.write_to_database(number_sets, "w")
             load_all_winning_numbers(True, False, None)
 
-    load_all_winning_numbers(True, False, None)
-    
     # add new ticket
     def add_new_ticket():
         new_ticket_text_area.delete(1.0, tk.END)
+        game_info = operations.read_gameinfo_json()
+
         global is_round_finished
-        if is_round_finished == True:
+        if game_info["game"]["round_finished"] == False:
             messagebox.showerror("Error", "No new tickets can be added untill round is reset")
             return
         try:
@@ -112,14 +114,8 @@ def main():
     def list_archived_winning_numbers():
         global previous_winning_numbers
         game_options_text_area.delete(1.0, END)
-        for i in range(len(previous_winning_numbers)):
-            game_options_text_area.insert(tk.END, f"Game {i+1}: ")
-            for j in range(len(previous_winning_numbers[i])):
-                if j == len(previous_winning_numbers[i]) - 1:
-                    game_options_text_area.insert(tk.END, f"{previous_winning_numbers[i][j]}")
-                else:    
-                    game_options_text_area.insert(tk.END, f"{previous_winning_numbers[i][j]} - ")
-            game_options_text_area.insert(tk.END, "\n")
+        
+        game_options_text_area.insert(tk.END, f"Game : {previous_winning_numbers}\n")
         
     # add new user
     def add_new_user():
@@ -147,16 +143,16 @@ def main():
     # switching frames from menu options
     # hides all frames that is not menuItem.
     def frame_selection_from_menu(menu_item):
+        if menu_item == 3:
+            update_game_stats()
         for i in range(len(frames)):
             if i != menu_item:
                 frames[i].forget()
             else:
                 frames[i].pack(fill="both", expand=1)
-        update_game_stats()
 
     # draw new set of winning numbers. Can only be used if game is reset
     def draw_new_set_of_winning_numbers():
-        
         game_status = operations.read_gameinfo_json()
         if game_status["game"]["round_finished"] == False:
             messagebox.showerror("Error", "Round is not finished and no new numbers can be drawn")
@@ -174,6 +170,7 @@ def main():
         
     # update game stats which can change from each time the game stats window is opened
     def update_game_stats():
+        global winning_numbers
         game_stats_text_area.delete(1.0, tk.END)
         total_users = user_operations.total_users
         total_active_tickets = ticket_operations.active_tickets
@@ -234,56 +231,86 @@ def main():
             find_user_name_entry.delete(0, tk.END)
             find_user_email_entry.delete(0, tk.END)
             find_user_user_id_entry.delete(0, tk.END)
-
-    # game reset after a draw is finished
-    def game_reset():
-             
-        ticket_operations.reset_game()
-        
-        
-        
-        messagebox.showinfo("Reset", "Game is reset.")
-        game_options_text_area.delete(1.0, END)
-        
-        game_info = operations.read_gameinfo_json()
-        game_info["game"]["round_finished"] == False
     
+    # reset Json-file
+    def reset_json():
+        game_info = operations.read_gameinfo_json()
+        game_info["ticket_data"]["numbers_per_row"] = 8
+        game_info["ticket_data"]["cost_per_row"] = 10
+        game_info["ticket_data"]["max_playable_numbers"] = 40
+        game_info["game"]["total_income"] = 0
+        game_info["game"]["current_price_pool"] = 0
+        game_info["game"]["jackpot"] = 0
+        game_info["game"]["round_finished"] = True
+        operations.write_to_json(game_info)
+        print("Json-file reset")
+
     # find this rounds winners
     def find_winners():
         game_options_text_area.delete(1.0, tk.END)
         global winning_numbers
+        game_info = operations.read_gameinfo_json()
+
+        active_ticket_list = operations.read_database("t")
+        if len(active_ticket_list) == 0:
+            messagebox.showerror("Error", "There are no active tickets yet.")
+            return
         
+        #find tickets with winning set of numbers
         winners = ticket_operations.find_winning_tickets(winning_numbers)
 
         if len(winners) == 0:
             game_options_text_area.insert(1.0, f"No winners this round!\n")
             game_options_text_area.insert(tk.END, f"Jackpot for next round. {ticket_operations.get_current_price_pool()} added to jackpot.") 
+            game_info["game"]["jackpot"] += ticket_operations.get_current_price_pool() # add current price pool to jackpot
+            game_info["game"]["current_price_pool"] == 0 # reset current price pool to 0 for next round
         else:
+            total_winnings = game_info['game']['current_price_pool'] + game_info['game']['jackpot']
             for i in range(len(winners)):
                 game_options_text_area.insert(1.0, f"Ticket ID: {winners[i].get_ticket_id()} belonging to user {winners[i].get_user_id()} has won!\n")
-        game_info = operations.read_gameinfo_json()
-        game_info["game"]["round_finished"] == True
+            game_options_text_area.insert(tk.END, f"Prize money is {game_info['game']['current_price_pool']}")
+            if game_info['game']['jackpot'] != 0:
+                game_options_text_area.insert(tk.END, f"Jackpot is {game_info['game']['jackpot']}\n",
+                                                f"Total prize: {total_winnings}")
+            winnings_per_player = total_winnings / len(winners)
+            game_options_text_area.insert(tk.END, f"Prize per winner: {winnings_per_player}")
+
+        game_info["game"]["round_finished"] == False
         operations.write_to_json(game_info)
+        ticket_operations.reset_game()
 
     #reset ticket-db
     def reset_ticket_db():
         ticket_operations.reset_database("t")
         ticket_operations.reset_database("a")
+        ticket_operations.reset_database("w")
+        print("ticket-dbs reset")
     
     #reset user-db
     def reset_user_db():
         user_operations.reset_database("u")
+        print("user-db reset")
     
-    #list all tickets
+    # list all users
+    def list_all_users():
+        find_user_text_area.delete(1.0, tk.END)
+        users = user_operations.read_database("u")
+        for i in range(len(users)):
+            find_user_text_area.insert(tk.END, f"User id: {users[i].get_user_id()}. Name: {users[i].get_name()}\n")
+    
+    # list all tickets
     def list_all_tickets():
         find_ticket_area.delete(1.0, tk.END)
         tickets = ticket_operations.read_database("t")
         for i in range(len(tickets)):
-            find_ticket_area.insert(tk.END, f"Ticket ID: {tickets[i].get_ticket_id()} to user {tickets[i].get_user_id()}\n")
+            if tickets[i].get_active() == True:
+                find_ticket_area.insert(tk.END, f"Ticket ID: {tickets[i].get_ticket_id()} to user {tickets[i].get_user_id()}. Active: {tickets[i].get_active()} \n")
     
     # exit-button in menu
     def exit():
         sys.exit()
+
+    load_all_winning_numbers(True, False, None)
 
     # settings for customisation
     default_text_color= "white"
@@ -330,27 +357,18 @@ def main():
     game_options_label = tk.Label(game_options_frame, text="GAME OPTIONS")
     game_options_label.pack()
     game_options_label.config(background=default_bg_color, fg=default_text_color)
-    game_options_draw_winning_numbers_label = tk.Label(game_options_frame, text="Draw new winning numbers")
-    game_options_reset_game_label = tk.Label(game_options_frame, text="Reset game")
-    game_options_archive_label = tk.Label(game_options_frame, text="Winning numbers archive")
-    game_options_find_winners_label = tk.Label(game_options_frame, text="Find this rounds winners")
-    game_options_labels = [game_options_draw_winning_numbers_label, game_options_reset_game_label, game_options_archive_label, game_options_find_winners_label]
-    for i in range(len(game_options_labels)):
-        game_options_labels[i].config(background=default_bg_color, fg=default_text_color)
-        game_options_labels[i].place(x=INITIAL_HORIZONTAL_WIDGET_PLACEMENT, y=vertical_placement)
-        vertical_placement += 50
-    vertical_placement = INITIAL_VERTICAL_WIDGET_PLACEMENT
-    # buttons
-    game_options_draw_winning_numbers_button = tk.Button(game_options_frame, text="Draw numbers", width=15, height=1, command=draw_new_set_of_winning_numbers)
-    game_options_reset_game_button = tk.Button(game_options_frame, text="Reset game", width=15, height=1, command=game_reset)
-    game_options_archived_winners_button = tk.Button(game_options_frame, text="Archive", width=15, height=1, command=list_archived_winning_numbers)
-    game_options_draw_winners_button = tk.Button(game_options_frame, text="Draw!", width=15, height=1, command=find_winners)
-    game_options_empty_ticketdb_button = tk.Button(game_options_frame, text="Reset ticket db", width=15, height=1, command=reset_ticket_db)
-    game_options_empty_userdb_button = tk.Button(game_options_frame, text="Reset user db", width=15, height=1, command=reset_user_db)
-    game_option_buttons = [game_options_draw_winning_numbers_button, game_options_reset_game_button, game_options_archived_winners_button, game_options_draw_winners_button, game_options_empty_ticketdb_button, game_options_empty_userdb_button]
 
+    # buttons
+    game_options_draw_winning_numbers_button = tk.Button(game_options_frame, text="Draw winning numbers", width=20, height=1, command=draw_new_set_of_winning_numbers)
+    game_options_archived_winners_button = tk.Button(game_options_frame, text="List previous winners", width=20, height=1, command=list_archived_winning_numbers)
+    game_options_draw_winners_button = tk.Button(game_options_frame, text="Weekly draw", width=20, height=1, command=find_winners)
+    game_options_empty_ticketdb_button = tk.Button(game_options_frame, text="Reset ticket db", width=20, height=1, command=reset_ticket_db)
+    game_options_empty_userdb_button = tk.Button(game_options_frame, text="Reset user db", width=20, height=1, command=reset_user_db)
+    game_options_reset_json_button = tk.Button(game_options_frame, text="Reset JSON", width=20, height=1, command=reset_json)
+    game_option_buttons = [game_options_draw_winning_numbers_button, game_options_archived_winners_button, game_options_draw_winners_button, game_options_empty_ticketdb_button, game_options_empty_userdb_button, game_options_reset_json_button]
+    
     for i in range(len(game_option_buttons)):
-        game_option_buttons[i].place(x=INITIAL_HORIZONTAL_WIDGET_PLACEMENT+160, y=vertical_placement)
+        game_option_buttons[i].place(x=INITIAL_HORIZONTAL_WIDGET_PLACEMENT, y=vertical_placement)
         vertical_placement += 50
     vertical_placement = INITIAL_VERTICAL_WIDGET_PLACEMENT
     # text area
@@ -469,6 +487,8 @@ def main():
     #button
     find_user_button = tk.Button(find_user_frame, text="Find", width=10, height=1, command=find_user)
     find_user_button.place(x=INITIAL_HORIZONTAL_WIDGET_PLACEMENT, y=200)
+    find_user_findall_button = tk.Button(find_user_frame, text="Print all users", width=10, height=1, command=list_all_users)
+    find_user_findall_button.place(x=INITIAL_HORIZONTAL_WIDGET_PLACEMENT, y=250)
     # output-text field
     find_user_text_area = scrolledtext.ScrolledText(find_user_frame, wrap=tk.WORD, width=70, height=35)
     find_user_text_area.place(x=350, y=INITIAL_VERTICAL_WIDGET_PLACEMENT)
